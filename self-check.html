@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Security Self-Check Quiz</title>
+<style>
+  :root {
+    --bg:#f6f8fa; --card:#ffffff; --text:#1f2328; --muted:#656d76;
+    --border:#d0d7de; --accent:#0969da; --ok:#1a7f37; --okbg:#dafbe1;
+    --bad:#cf222e; --badbg:#ffebe9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0d1117; --card:#161b22; --text:#e6edf3; --muted:#8b949e;
+      --border:#30363d; --accent:#4493f8; --ok:#3fb950; --okbg:#12261e;
+      --bad:#f85149; --badbg:#25171c;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; line-height:1.5; }
+  main { max-width:780px; margin:0 auto; padding:32px 20px 80px; }
+  header h1 { margin:0 0 8px; font-size:1.9rem; }
+  header p { color:var(--muted); margin:0 0 8px; }
+  .back { display:inline-block; margin-top:8px; color:var(--accent); text-decoration:none; font-size:.95rem; }
+  .back:hover { text-decoration:underline; }
+  .scorebar { position:sticky; top:0; background:var(--bg); padding:12px 0; margin:16px 0 8px;
+    border-bottom:1px solid var(--border); font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 18px 6px; margin:18px 0; }
+  .card h3 { margin:0 0 14px; font-size:1.1rem; }
+  .options { display:flex; flex-direction:column; gap:10px; }
+  .option { text-align:left; padding:12px 14px; border:1px solid var(--border); border-radius:8px;
+    background:transparent; color:var(--text); font-size:1rem; cursor:pointer; transition:border-color .15s, background .15s; }
+  .option:hover:not(:disabled) { border-color:var(--accent); }
+  .option:disabled { cursor:default; }
+  .option.correct { border-color:var(--ok); background:var(--okbg); color:var(--ok); font-weight:600; }
+  .option.wrong { border-color:var(--bad); background:var(--badbg); color:var(--bad); }
+  .explain { margin:14px 2px 12px; padding:10px 12px; border-left:3px solid var(--accent);
+    background:rgba(9,105,218,.06); border-radius:0 6px 6px 0; color:var(--muted); font-size:.95rem; }
+  .result { margin-top:24px; padding:20px; text-align:center; background:var(--card);
+    border:1px solid var(--border); border-radius:12px; font-size:1.15rem; font-weight:600; display:none; }
+  .result button { margin-top:12px; padding:10px 18px; border:1px solid var(--border); border-radius:8px;
+    background:var(--accent); color:#fff; font-size:1rem; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title"></h1>
+    <p id="subtitle"></p>
+    <a class="back" id="back" href="#"></a>
+  </header>
+  <div class="scorebar" id="scorebar">Answered 0 of 0</div>
+  <div id="quiz"></div>
+  <div class="result" id="result"></div>
+</main>
+<script>
+const QUIZ = {
+  title: "Web Security Self-Check",
+  subtitle: "Eight questions on the ideas in this guide. Pick an answer to see if you are right and why.",
+  back: { text: "Back to the guide", href: "index.html" },
+  questions: [
+    {
+      q: "What is the safest way to stop SQL injection?",
+      options: ["Escape quote characters by hand", "Use parameterized queries or prepared statements", "Hide the SQL query from users", "Only limit the length of the input"],
+      answer: 1,
+      explain: "Never build queries by concatenating user input. Parameterized queries keep data separate from the SQL command."
+    },
+    {
+      q: "Where should a session token be stored to keep it out of reach of page JavaScript?",
+      options: ["localStorage", "A regular cookie", "An HTTP-only cookie", "A hidden form field"],
+      answer: 2,
+      explain: "HTTP-only cookies cannot be read by JavaScript, which limits token theft through cross-site scripting."
+    },
+    {
+      q: "The HSTS header should have a max-age of at least how long?",
+      options: ["One hour", "One day", "One year (31536000 seconds)", "It does not need a value"],
+      answer: 2,
+      explain: "The guide recommends at least one year, with includeSubDomains set to true."
+    },
+    {
+      q: "How should user passwords be stored?",
+      options: ["As plain text", "With MD5", "With reversible encryption", "As a slow salted hash such as bcrypt"],
+      answer: 3,
+      explain: "Use a slow, salted hashing algorithm like bcrypt (for example, 10 salt rounds). Never store passwords you can read back."
+    },
+    {
+      q: "Which pair of measures helps prevent CSRF?",
+      options: ["Using GET for every request", "The SameSite cookie attribute plus anti-CSRF tokens", "Turning cookies off entirely", "Making passwords longer"],
+      answer: 1,
+      explain: "SameSite stops cookies being sent on cross-site requests, and CSRF tokens confirm the request came from your own site."
+    },
+    {
+      q: "In production, what should Access-Control-Allow-Origin be set to?",
+      options: ["*", "A whitelist of specific trusted origins", "Left empty", "The visitor's IP address"],
+      answer: 1,
+      explain: "Never use * in production. List only the specific origins you trust."
+    },
+    {
+      q: "In a strong Content Security Policy, what should you avoid?",
+      options: ["Nonces", "Hashes", "unsafe-inline and unsafe-eval", "Serving over HTTPS"],
+      answer: 2,
+      explain: "Avoid unsafe-inline and unsafe-eval. Allow specific inline scripts with a nonce or a hash instead."
+    },
+    {
+      q: "Setting X-Frame-Options to DENY protects against which attack?",
+      options: ["SQL injection", "Clickjacking", "Password brute forcing", "DNS spoofing"],
+      answer: 1,
+      explain: "DENY stops your pages being loaded inside a frame, which is how clickjacking tricks users into clicking hidden elements."
+    }
+  ]
+};
+
+document.getElementById("title").textContent = QUIZ.title;
+document.getElementById("subtitle").textContent = QUIZ.subtitle;
+const backEl = document.getElementById("back");
+backEl.textContent = QUIZ.back.text;
+backEl.href = QUIZ.back.href;
+
+const quizEl = document.getElementById("quiz");
+const scorebar = document.getElementById("scorebar");
+const resultEl = document.getElementById("result");
+const total = QUIZ.questions.length;
+let answered = 0, correct = 0;
+
+QUIZ.questions.forEach((item, qi) => {
+  const card = document.createElement("section");
+  card.className = "card";
+  const h = document.createElement("h3");
+  h.textContent = (qi + 1) + ". " + item.q;
+  card.appendChild(h);
+  const opts = document.createElement("div");
+  opts.className = "options";
+  item.options.forEach((opt, oi) => {
+    const btn = document.createElement("button");
+    btn.className = "option";
+    btn.type = "button";
+    btn.textContent = opt;
+    btn.addEventListener("click", () => choose(card, opts, btn, oi, item));
+    opts.appendChild(btn);
+  });
+  card.appendChild(opts);
+  quizEl.appendChild(card);
+});
+updateBar();
+
+function choose(card, opts, btn, oi, item) {
+  if (card.dataset.done) return;
+  card.dataset.done = "1";
+  answered++;
+  const isRight = oi === item.answer;
+  if (isRight) { btn.classList.add("correct"); correct++; }
+  else { btn.classList.add("wrong"); opts.children[item.answer].classList.add("correct"); }
+  Array.from(opts.children).forEach((b) => { b.disabled = true; });
+  const ex = document.createElement("p");
+  ex.className = "explain";
+  ex.textContent = (isRight ? "Correct. " : "Not quite. ") + item.explain;
+  card.appendChild(ex);
+  updateBar();
+}
+
+function updateBar() {
+  scorebar.textContent = "Answered " + answered + " of " + total + "   |   Score " + correct + "/" + total;
+  if (answered === total) showResult();
+}
+
+function showResult() {
+  const pct = Math.round((correct / total) * 100);
+  let msg;
+  if (pct === 100) msg = "Perfect score. You know this material well.";
+  else if (pct >= 70) msg = "Nice work. Review the ones you missed and you are set.";
+  else if (pct >= 40) msg = "Good start. Reread the guide and try again.";
+  else msg = "Worth another read through the guide, then come back and retry.";
+  resultEl.innerHTML = "You scored " + correct + " out of " + total + " (" + pct + "%).<br>" + msg +
+    '<br><button type="button" id="retry">Try again</button>';
+  resultEl.style.display = "block";
+  document.getElementById("retry").addEventListener("click", () => location.reload());
+  resultEl.scrollIntoView({ behavior: "smooth" });
+}
+</script>
+</body>
+</html>
